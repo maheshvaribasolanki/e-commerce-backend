@@ -1,82 +1,77 @@
-"use strict";
-var __importDefault = (this && this.__importDefault) || function (mod) {
-    return (mod && mod.__esModule) ? mod : { "default": mod };
-};
-Object.defineProperty(exports, "__esModule", { value: true });
-require("dotenv/config");
-const express_1 = __importDefault(require("express"));
-const db_1 = require("./db");
-const cors_1 = __importDefault(require("cors"));
-const morgan_1 = __importDefault(require("morgan"));
-const envelope_1 = require("./utils/envelope");
-const notFound_1 = require("./middleware/notFound");
-const errorhandler_1 = require("./middleware/errorhandler");
-const express_2 = require("@clerk/express");
-const auth_routes_1 = require("./routes/auth/auth.routes");
-const dashboard_routes_1 = require("./routes/admin/dashboard.routes");
-const product_routes_1 = require("./routes/admin/product.routes");
-const orders_routes_1 = require("./routes/admin/orders.routes");
-const promo_routes_1 = require("./routes/admin/promo.routes");
-const settings_routes_1 = require("./routes/admin/settings.routes");
-const home_routes_1 = require("./routes/customer/home.routes");
-const product_routes_2 = require("./routes/customer/product.routes");
-const cart_wishlist_routes_1 = require("./routes/customer/cart-wishlist.routes");
-const checkout_routes_1 = require("./routes/customer/checkout.routes");
-const checkout_with_points_routes_1 = require("./routes/customer/checkout-with-points.routes");
-const orders_routes_2 = require("./routes/customer/orders.routes");
-const promo_routes_2 = require("./routes/customer/promo.routes");
-const address_routes_1 = require("./routes/customer/address.routes");
+import 'dotenv/config';
+import express from 'express';
+import { connectDB } from './db.js';
+import cors from 'cors';
+import morgan from 'morgan';
+import { ok } from "./utils/envelope.js";
+import { notFound } from './middleware/notFound.js';
+import { errorHandler } from './middleware/errorhandler.js';
+import { clerkMiddleware } from '@clerk/express';
+import { authRouter } from './routes/auth/auth.routes.js';
+import { adminDashboardRouter } from './routes/admin/dashboard.routes.js';
+import { adminProductRouter } from './routes/admin/product.routes.js';
+import { adminOrderRouter } from './routes/admin/orders.routes.js';
+import { adminPromoRouter } from './routes/admin/promo.routes.js';
+import { adminSettingsRouter } from './routes/admin/settings.routes.js';
+import { customerHomeRouter } from './routes/customer/home.routes.js';
+import { customerProductRouter } from './routes/customer/product.routes.js';
+import { customerCartWishlistRouter } from './routes/customer/cart-wishlist.routes.js';
+import { customerCheckoutRouter } from './routes/customer/checkout.routes.js';
+import { customerCheckoutWithPointsRouter } from './routes/customer/checkout-with-points.routes.js';
+import { customerOrderRouter } from './routes/customer/orders.routes.js';
+import { customerPromoRouter } from './routes/customer/promo.routes.js';
+import { customerAddressRouter } from './routes/customer/address.routes.js';
 async function mainEntryFunction() {
-    await (0, db_1.connectDB)();
-    const app = (0, express_1.default)();
-    const corsOrigins = (process.env.CORS_ORIGINS || "http://localhost:3000,http://localhost:5173")
+    await connectDB();
+    const app = express();
+    const corsOrigins = (process.env.CORS_ORIGINS || "http://localhost:3000,http://localhost:5174")
         .split(",")
         .map(origin => origin.trim())
         .filter(Boolean);
-    app.use((0, cors_1.default)({
+    app.use(cors({
         origin: corsOrigins,
         credentials: true
     }));
-    app.use(express_1.default.json());
-    app.use((0, morgan_1.default)('dev'));
+    app.use(express.json());
+    app.use(morgan('dev'));
     // Clerk authentication middleware must run before authenticated routes
-    app.use((0, express_2.clerkMiddleware)());
+    app.use(clerkMiddleware());
     app.get("/health", (_req, res) => {
-        res.status(200).json((0, envelope_1.ok)({ message: "Server is healthy/in running state" }));
+        res.status(200).json(ok({ message: "Server is healthy/in running state" }));
     });
     // Auth routes
-    app.use("/auth", auth_routes_1.authRouter);
+    app.use("/auth", authRouter);
     // Admin routes (mounted with and without /api prefix)
-    app.use("/api/admin", dashboard_routes_1.adminDashboardRouter);
-    app.use("/api/admin", product_routes_1.adminProductRouter);
-    app.use("/api/admin", orders_routes_1.adminOrderRouter);
-    app.use("/api/admin", promo_routes_1.adminPromoRouter);
-    app.use("/api/admin", settings_routes_1.adminSettingsRouter);
-    app.use("/admin", dashboard_routes_1.adminDashboardRouter);
-    app.use("/admin", product_routes_1.adminProductRouter);
-    app.use("/admin", orders_routes_1.adminOrderRouter);
-    app.use("/admin", promo_routes_1.adminPromoRouter);
-    app.use("/admin", settings_routes_1.adminSettingsRouter);
+    app.use("/api/admin", adminDashboardRouter);
+    app.use("/api/admin", adminProductRouter);
+    app.use("/api/admin", adminOrderRouter);
+    app.use("/api/admin", adminPromoRouter);
+    app.use("/api/admin", adminSettingsRouter);
+    app.use("/admin", adminDashboardRouter);
+    app.use("/admin", adminProductRouter);
+    app.use("/admin", adminOrderRouter);
+    app.use("/admin", adminPromoRouter);
+    app.use("/admin", adminSettingsRouter);
     // Customer routes (mounted with and without /api prefix)
-    app.use("/api/customer", home_routes_1.customerHomeRouter);
-    app.use("/api/customer", product_routes_2.customerProductRouter);
-    app.use("/api/customer", cart_wishlist_routes_1.customerCartWishlistRouter);
-    app.use("/api/customer", checkout_routes_1.customerCheckoutRouter);
-    app.use("/api/customer", checkout_with_points_routes_1.customerCheckoutWithPointsRouter);
-    app.use("/api/customer", orders_routes_2.customerOrderRouter);
-    app.use("/api/customer", promo_routes_2.customerPromoRouter);
-    app.use("/api/customer", address_routes_1.customerAddressRouter);
-    app.use("/customer", home_routes_1.customerHomeRouter);
-    app.use("/customer", product_routes_2.customerProductRouter);
-    app.use("/customer", cart_wishlist_routes_1.customerCartWishlistRouter);
-    app.use("/customer", checkout_routes_1.customerCheckoutRouter);
-    app.use("/customer", checkout_with_points_routes_1.customerCheckoutWithPointsRouter);
-    app.use("/customer", orders_routes_2.customerOrderRouter);
-    app.use("/customer", promo_routes_2.customerPromoRouter);
-    app.use("/customer", address_routes_1.customerAddressRouter);
+    app.use("/api/customer", customerHomeRouter);
+    app.use("/api/customer", customerProductRouter);
+    app.use("/api/customer", customerCartWishlistRouter);
+    app.use("/api/customer", customerCheckoutRouter);
+    app.use("/api/customer", customerCheckoutWithPointsRouter);
+    app.use("/api/customer", customerOrderRouter);
+    app.use("/api/customer", customerPromoRouter);
+    app.use("/api/customer", customerAddressRouter);
+    app.use("/customer", customerHomeRouter);
+    app.use("/customer", customerProductRouter);
+    app.use("/customer", customerCartWishlistRouter);
+    app.use("/customer", customerCheckoutRouter);
+    app.use("/customer", customerCheckoutWithPointsRouter);
+    app.use("/customer", customerOrderRouter);
+    app.use("/customer", customerPromoRouter);
+    app.use("/customer", customerAddressRouter);
     // 404 & Error handlers must be mounted last
-    app.use(notFound_1.notFound);
-    app.use(errorhandler_1.errorHandler);
+    app.use(notFound);
+    app.use(errorHandler);
     const port = Number(process.env.PORT || 5000);
     app.listen(port, () => {
         console.log(`Server is now listening to port ${port}`);

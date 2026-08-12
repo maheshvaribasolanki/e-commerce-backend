@@ -1,13 +1,10 @@
-"use strict";
-Object.defineProperty(exports, "__esModule", { value: true });
-exports.customerAddressRouter = void 0;
-const express_1 = require("express");
-const auth_1 = require("../../middleware/auth");
-const asyncHandler_1 = require("../../utils/asyncHandler");
-const User_1 = require("../../models/User");
-const helpers_1 = require("../../utils/helpers");
-const envelope_1 = require("../../utils/envelope");
-const AppError_1 = require("../../utils/AppError");
+import { Router } from "express";
+import { getDbUserFromReq, requireAuth } from "../../middleware/auth.js";
+import { asyncHandler } from "../../utils/asyncHandler.js";
+import { User } from "../../models/User.js";
+import { requireFound, requireText } from "../../utils/helpers.js";
+import { ok } from "../../utils/envelope.js";
+import { AppError } from "../../utils/AppError.js";
 function mapAddress(item) {
     return {
         _id: String(item._id || ""),
@@ -18,30 +15,30 @@ function mapAddress(item) {
         isDefault: item.isDefault,
     };
 }
-exports.customerAddressRouter = (0, express_1.Router)();
-exports.customerAddressRouter.use(auth_1.requireAuth);
-exports.customerAddressRouter.get("/addresses", (0, asyncHandler_1.asyncHandler)(async (req, res) => {
-    const dbUser = await (0, auth_1.getDbUserFromReq)(req);
-    const user = await User_1.User.findById(dbUser._id);
-    const foundUser = (0, helpers_1.requireFound)(user, "User not found", 404);
+export const customerAddressRouter = Router();
+customerAddressRouter.use(requireAuth);
+customerAddressRouter.get("/addresses", asyncHandler(async (req, res) => {
+    const dbUser = await getDbUserFromReq(req);
+    const user = await User.findById(dbUser._id);
+    const foundUser = requireFound(user, "User not found", 404);
     const addresses = (foundUser.addresses || []);
     const items = [...addresses]
         .sort((a, b) => Number(b.isDefault) - Number(a.isDefault))
         .map(mapAddress);
-    res.json((0, envelope_1.ok)({ items }));
+    res.json(ok({ items }));
 }));
-exports.customerAddressRouter.post("/addresses", (0, asyncHandler_1.asyncHandler)(async (req, res) => {
-    const dbUser = await (0, auth_1.getDbUserFromReq)(req);
+customerAddressRouter.post("/addresses", asyncHandler(async (req, res) => {
+    const dbUser = await getDbUserFromReq(req);
     const fullName = String(req.body.fullName || "").trim();
     const address = String(req.body.address || "").trim();
     const state = String(req.body.state || "").trim();
     const postalCode = String(req.body.postalCode || "").trim();
-    (0, helpers_1.requireText)(fullName, "Full name is required");
-    (0, helpers_1.requireText)(address, "Address is required");
-    (0, helpers_1.requireText)(state, "State is required");
-    (0, helpers_1.requireText)(postalCode, "postal code is required");
-    const user = await User_1.User.findById(dbUser._id);
-    const foundUser = (0, helpers_1.requireFound)(user, "User not found", 404);
+    requireText(fullName, "Full name is required");
+    requireText(address, "Address is required");
+    requireText(state, "State is required");
+    requireText(postalCode, "postal code is required");
+    const user = await User.findById(dbUser._id);
+    const foundUser = requireFound(user, "User not found", 404);
     const addresses = (foundUser.addresses || []);
     const shouldMarkAsDefault = req.body.isDefault === true || addresses.length === 0;
     if (shouldMarkAsDefault) {
@@ -60,26 +57,26 @@ exports.customerAddressRouter.post("/addresses", (0, asyncHandler_1.asyncHandler
     const items = [...addresses]
         .sort((a, b) => Number(b.isDefault) - Number(a.isDefault))
         .map(mapAddress);
-    res.json((0, envelope_1.ok)({ items }));
+    res.json(ok({ items }));
 }));
-exports.customerAddressRouter.patch("/addresses/:addressId", (0, asyncHandler_1.asyncHandler)(async (req, res) => {
-    const dbUser = await (0, auth_1.getDbUserFromReq)(req);
+customerAddressRouter.patch("/addresses/:addressId", asyncHandler(async (req, res) => {
+    const dbUser = await getDbUserFromReq(req);
     const addressId = String(req.params.addressId || "").trim();
-    (0, helpers_1.requireText)(addressId, "Address id is required");
+    requireText(addressId, "Address id is required");
     const fullName = String(req.body.fullName || "").trim();
     const address = String(req.body.address || "").trim();
     const state = String(req.body.state || "").trim();
     const postalCode = String(req.body.postalCode || "").trim();
-    (0, helpers_1.requireText)(fullName, "Full name is required");
-    (0, helpers_1.requireText)(address, "Address is required");
-    (0, helpers_1.requireText)(state, "State is required");
-    (0, helpers_1.requireText)(postalCode, "postal code is required");
-    const user = await User_1.User.findById(dbUser._id);
-    const foundUser = (0, helpers_1.requireFound)(user, "User not found", 404);
+    requireText(fullName, "Full name is required");
+    requireText(address, "Address is required");
+    requireText(state, "State is required");
+    requireText(postalCode, "postal code is required");
+    const user = await User.findById(dbUser._id);
+    const foundUser = requireFound(user, "User not found", 404);
     const addresses = (foundUser.addresses || []);
     const getAddressTheUserWantToEdit = addresses.find((currentAddress) => String(currentAddress._id) === addressId);
     if (!getAddressTheUserWantToEdit) {
-        throw new AppError_1.AppError(404, "Address not found");
+        throw new AppError(404, "Address not found");
     }
     const shouldMarkAsDefault = req.body.isDefault === true || addresses.length === 0;
     if (shouldMarkAsDefault) {
@@ -98,18 +95,18 @@ exports.customerAddressRouter.patch("/addresses/:addressId", (0, asyncHandler_1.
     const items = [...foundUser.addresses]
         .sort((a, b) => Number(b.isDefault) - Number(a.isDefault))
         .map(mapAddress);
-    res.json((0, envelope_1.ok)({ items }));
+    res.json(ok({ items }));
 }));
-exports.customerAddressRouter.delete("/addresses/:addressId", (0, asyncHandler_1.asyncHandler)(async (req, res) => {
-    const dbUser = await (0, auth_1.getDbUserFromReq)(req);
+customerAddressRouter.delete("/addresses/:addressId", asyncHandler(async (req, res) => {
+    const dbUser = await getDbUserFromReq(req);
     const addressId = String(req.params.addressId || "").trim();
-    (0, helpers_1.requireText)(addressId, "Address id is required");
-    const user = await User_1.User.findById(dbUser._id);
-    const foundUser = (0, helpers_1.requireFound)(user, "User not found", 404);
+    requireText(addressId, "Address id is required");
+    const user = await User.findById(dbUser._id);
+    const foundUser = requireFound(user, "User not found", 404);
     const addresses = (foundUser.addresses || []);
     const addressToBeDeletedIndex = addresses.findIndex((currentAddress) => String(currentAddress._id) === addressId);
     if (addressToBeDeletedIndex < 0) {
-        throw new AppError_1.AppError(404, "Address not found");
+        throw new AppError(404, "Address not found");
     }
     const wasDefault = addresses[addressToBeDeletedIndex].isDefault;
     addresses.splice(addressToBeDeletedIndex, 1);
@@ -122,5 +119,5 @@ exports.customerAddressRouter.delete("/addresses/:addressId", (0, asyncHandler_1
     const items = [...foundUser.addresses]
         .sort((a, b) => Number(b.isDefault) - Number(a.isDefault))
         .map(mapAddress);
-    res.json((0, envelope_1.ok)({ items }));
+    res.json(ok({ items }));
 }));

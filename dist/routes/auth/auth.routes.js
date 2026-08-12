@@ -1,20 +1,17 @@
-"use strict";
-Object.defineProperty(exports, "__esModule", { value: true });
-exports.authRouter = void 0;
-const express_1 = require("express");
-const auth_1 = require("../../middleware/auth");
-const asyncHandler_1 = require("../../utils/asyncHandler");
-const express_2 = require("@clerk/express");
-const AppError_1 = require("../../utils/AppError");
-const User_1 = require("../../models/User");
-const envelope_1 = require("../../utils/envelope");
-exports.authRouter = (0, express_1.Router)();
-exports.authRouter.post("/sync", auth_1.requireAuth, (0, asyncHandler_1.asyncHandler)(async (req, res) => {
-    const { userId } = (0, express_2.getAuth)(req);
+import { Router } from "express";
+import { requireAuth } from "../../middleware/auth.js";
+import { asyncHandler } from "../../utils/asyncHandler.js";
+import { clerkClient, getAuth } from "@clerk/express";
+import { AppError } from "../../utils/AppError.js";
+import { User } from "../../models/User.js";
+import { ok } from "../../utils/envelope.js";
+export const authRouter = Router();
+authRouter.post("/sync", requireAuth, asyncHandler(async (req, res) => {
+    const { userId } = getAuth(req);
     if (!userId) {
-        throw new AppError_1.AppError(401, "User is not logged in. Means unauth user! !");
+        throw new AppError(401, "User is not logged in. Means unauth user! !");
     }
-    const clerkUser = await express_2.clerkClient.users.getUser(userId);
+    const clerkUser = await clerkClient.users.getUser(userId);
     const extractEmailFromUserInfo = clerkUser.emailAddresses.find((item) => item.id === clerkUser.primaryEmailAddressId) || clerkUser.emailAddresses[0];
     const email = extractEmailFromUserInfo.emailAddress;
     const fullName = [clerkUser.firstName, clerkUser.lastName]
@@ -31,14 +28,14 @@ exports.authRouter.post("/sync", auth_1.requireAuth, (0, asyncHandler_1.asyncHan
     // update/do nothing
     // create the user and save in our db with
     // role
-    const existingUser = await User_1.User.findOne({ clerkUserId: userId });
+    const existingUser = await User.findOne({ clerkUserId: userId });
     const shouldBeAdmin = email ? adminEmails.has(email.toLowerCase()) : false;
     const nextRole = existingUser?.role === "admin"
         ? "admin"
         : shouldBeAdmin
             ? "admin"
             : existingUser?.role || "user";
-    const newlyCreatedDbUser = await User_1.User.findOneAndUpdate({
+    const newlyCreatedDbUser = await User.findOneAndUpdate({
         clerkUserId: userId,
     }, {
         clerkUserId: userId,
@@ -50,7 +47,7 @@ exports.authRouter.post("/sync", auth_1.requireAuth, (0, asyncHandler_1.asyncHan
         upsert: true,
         setDefaultsOnInsert: true,
     });
-    res.status(200).json((0, envelope_1.ok)({
+    res.status(200).json(ok({
         user: {
             id: newlyCreatedDbUser._id,
             clerkUserId: newlyCreatedDbUser.clerkUserId,
@@ -60,16 +57,16 @@ exports.authRouter.post("/sync", auth_1.requireAuth, (0, asyncHandler_1.asyncHan
         },
     }));
 }));
-exports.authRouter.get("/me", auth_1.requireAuth, (0, asyncHandler_1.asyncHandler)(async (req, res) => {
-    const { userId } = (0, express_2.getAuth)(req);
+authRouter.get("/me", requireAuth, asyncHandler(async (req, res) => {
+    const { userId } = getAuth(req);
     if (!userId) {
-        throw new AppError_1.AppError(401, "User is not logged in. Means unauth user! !");
+        throw new AppError(401, "User is not logged in. Means unauth user! !");
     }
-    const dbUser = await User_1.User.findOne({ clerkUserId: userId });
+    const dbUser = await User.findOne({ clerkUserId: userId });
     if (!dbUser) {
-        throw new AppError_1.AppError(404, "User is not found in DB");
+        throw new AppError(404, "User is not found in DB");
     }
-    res.status(200).json((0, envelope_1.ok)({
+    res.status(200).json(ok({
         user: {
             id: dbUser._id,
             clerkUserId: dbUser.clerkUserId,

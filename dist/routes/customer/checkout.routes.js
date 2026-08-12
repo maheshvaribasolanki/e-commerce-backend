@@ -1,43 +1,40 @@
-"use strict";
-Object.defineProperty(exports, "__esModule", { value: true });
-exports.customerCheckoutRouter = void 0;
-const express_1 = require("express");
-const Product_1 = require("../../models/Product");
-const auth_1 = require("../../middleware/auth");
-const asyncHandler_1 = require("../../utils/asyncHandler");
-const helpers_1 = require("../../utils/helpers");
-const User_1 = require("../../models/User");
-const Cart_1 = require("../../models/Cart");
-const AppError_1 = require("../../utils/AppError");
-const Promo_1 = require("../../models/Promo");
-const Order_1 = require("../../models/Order");
-const envelope_1 = require("../../utils/envelope");
-exports.customerCheckoutRouter = (0, express_1.Router)();
-exports.customerCheckoutRouter.use(auth_1.requireAuth);
-exports.customerCheckoutRouter.post("/checkout/place-order", (0, asyncHandler_1.asyncHandler)(async (req, res) => {
-    const dbUser = await (0, auth_1.getDbUserFromReq)(req);
+import { Router } from "express";
+import { Product } from "../../models/Product.js";
+import { getDbUserFromReq, requireAuth } from "../../middleware/auth.js";
+import { asyncHandler } from "../../utils/asyncHandler.js";
+import { requireFound, requireText } from "../../utils/helpers.js";
+import { User } from "../../models/User.js";
+import { Cart } from "../../models/Cart.js";
+import { AppError } from "../../utils/AppError.js";
+import { Promo } from "../../models/Promo.js";
+import { Order } from "../../models/Order.js";
+import { ok } from "../../utils/envelope.js";
+export const customerCheckoutRouter = Router();
+customerCheckoutRouter.use(requireAuth);
+customerCheckoutRouter.post("/checkout/place-order", asyncHandler(async (req, res) => {
+    const dbUser = await getDbUserFromReq(req);
     const addressId = String(req.body.addressId || "").trim();
     const promoCode = String(req.body.promoCode || "")
         .trim()
         .toUpperCase();
-    (0, helpers_1.requireText)(addressId, "Address is required");
+    requireText(addressId, "Address is required");
     // fetch user details and cart
     const [user, cart] = await Promise.all([
-        User_1.User.findById(dbUser._id)
+        User.findById(dbUser._id)
             .select("name email addresses")
             .lean(),
-        Cart_1.Cart.findOne({ user: dbUser._id }).select("items").lean(),
+        Cart.findOne({ user: dbUser._id }).select("items").lean(),
     ]);
-    const foundUser = (0, helpers_1.requireFound)(user, "User not found", 404);
-    const foundCart = (0, helpers_1.requireFound)(cart, "Cart not found", 404);
+    const foundUser = requireFound(user, "User not found", 404);
+    const foundCart = requireFound(cart, "Cart not found", 404);
     if (!foundCart.items.length) {
-        throw new AppError_1.AppError(400, "Cart is empty");
+        throw new AppError(400, "Cart is empty");
     }
     const selectedAddress = foundUser.addresses.find((item) => String(item._id) === addressId);
     if (!selectedAddress) {
-        throw new AppError_1.AppError(404, "Address not found");
+        throw new AppError(404, "Address not found");
     }
-    const products = await Product_1.Product.find({
+    const products = await Product.find({
         _id: { $in: foundCart.items.map((item) => item.product) },
     })
         .select("price salePercentage stock status")
@@ -48,10 +45,10 @@ exports.customerCheckoutRouter.post("/checkout/place-order", (0, asyncHandler_1.
     const items = foundCart.items.map((cartItem) => {
         const product = productMap.get(String(cartItem.product));
         if (!product || product.status !== "active") {
-            throw new AppError_1.AppError(400, "One or more cart items are not available");
+            throw new AppError(400, "One or more cart items are not available");
         }
         if (product.stock < cartItem.quantity) {
-            throw new AppError_1.AppError(400, "Cart items are out of stock");
+            throw new AppError(400, "Cart items are out of stock");
         }
         const finalPrice = product.salePercentage
             ? Math.round(product.price - (product.price * product.salePercentage) / 100)
@@ -66,18 +63,18 @@ exports.customerCheckoutRouter.post("/checkout/place-order", (0, asyncHandler_1.
     let appliedPromoCode = "";
     let discountAmount = 0;
     if (promoCode) {
-        const promo = await Promo_1.Promo.findOne({ code: promoCode })
+        const promo = await Promo.findOne({ code: promoCode })
             .select("code percentage count minimumOrderValue startsAt endsAt")
             .lean();
-        const foundPromo = (0, helpers_1.requireFound)(promo, "Promo not found", 404);
+        const foundPromo = requireFound(promo, "Promo not found", 404);
         const now = new Date();
         if (now < foundPromo.startsAt ||
             now > foundPromo.endsAt ||
             foundPromo.count < 1) {
-            throw new AppError_1.AppError(400, "Promo code is not active");
+            throw new AppError(400, "Promo code is not active");
         }
         if (subTotal < foundPromo.minimumOrderValue) {
-            throw new AppError_1.AppError(400, "Minimum order value for this promo is not reached");
+            throw new AppError(400, "Minimum order value for this promo is not reached");
         }
         appliedPromoCode = foundPromo.code;
         discountAmount = Math.round((subTotal * foundPromo.percentage) / 100);
@@ -85,19 +82,19 @@ exports.customerCheckoutRouter.post("/checkout/place-order", (0, asyncHandler_1.
     const totalAmount = Math.max(subTotal - discountAmount, 0);
     // Update product stock
     for (const item of items) {
-        const updated = await Product_1.Product.updateOne({
+        const updated = await Product.updateOne({
             _id: item.product,
             stock: { $gte: item.quantity },
         }, {
             $inc: { stock: -item.quantity },
         });
         if (!updated.matchedCount) {
-            throw new AppError_1.AppError(400, "One or more cart items are out of stock");
+            throw new AppError(400, "One or more cart items are out of stock");
         }
     }
     // Decrement promo usage if applied
     if (appliedPromoCode) {
-        await Promo_1.Promo.updateOne({
+        await Promo.updateOne({
             code: appliedPromoCode,
             count: { $gt: 0 },
         }, {
@@ -105,7 +102,7 @@ exports.customerCheckoutRouter.post("/checkout/place-order", (0, asyncHandler_1.
         });
     }
     // Clear cart
-    await Cart_1.Cart.updateOne({ user: dbUser._id }, { $set: { items: [] } });
+    await Cart.updateOne({ user: dbUser._id }, { $set: { items: [] } });
     const deliveryAddress = [
         selectedAddress.address,
         selectedAddress.state,
@@ -114,7 +111,7 @@ exports.customerCheckoutRouter.post("/checkout/place-order", (0, asyncHandler_1.
         .filter(Boolean)
         .join(", ");
     const paymentId = `order_${Date.now()}`;
-    const order = await Order_1.Order.create({
+    const order = await Order.create({
         user: dbUser._id,
         customerName: foundUser.name || selectedAddress.fullName,
         customerEmail: foundUser.email || "",
@@ -129,7 +126,7 @@ exports.customerCheckoutRouter.post("/checkout/place-order", (0, asyncHandler_1.
         orderStatus: "placed",
         paymentId,
     });
-    res.json((0, envelope_1.ok)({
+    res.json(ok({
         _id: String(order._id),
         totalItems,
         discountAmount,

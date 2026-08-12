@@ -1,14 +1,11 @@
-"use strict";
-Object.defineProperty(exports, "__esModule", { value: true });
-exports.customerProductRouter = void 0;
-const express_1 = require("express");
-const asyncHandler_1 = require("../../utils/asyncHandler");
-const Category_1 = require("../../models/Category");
-const envelope_1 = require("../../utils/envelope");
-const Product_1 = require("../../models/Product");
-const helpers_1 = require("../../utils/helpers");
-exports.customerProductRouter = (0, express_1.Router)();
-exports.customerProductRouter.get("/categories", (0, asyncHandler_1.asyncHandler)(async (_req, res) => {
+import { Router } from "express";
+import { asyncHandler } from "../../utils/asyncHandler.js";
+import { Category } from "../../models/Category.js";
+import { ok } from "../../utils/envelope.js";
+import { Product } from "../../models/Product.js";
+import { requireFound } from "../../utils/helpers.js";
+export const customerProductRouter = Router();
+customerProductRouter.get("/categories", asyncHandler(async (_req, res) => {
     const requiredCategories = [
         "Electronics",
         "Laptops",
@@ -20,15 +17,15 @@ exports.customerProductRouter.get("/categories", (0, asyncHandler_1.asyncHandler
         "Accessories",
     ];
     for (const name of requiredCategories) {
-        const exists = await Category_1.Category.findOne({ name });
+        const exists = await Category.findOne({ name });
         if (!exists) {
-            await Category_1.Category.create({ name });
+            await Category.create({ name });
         }
     }
-    const categories = await Category_1.Category.find({}).sort({ name: 1 });
-    res.json((0, envelope_1.ok)(categories));
+    const categories = await Category.find({}).sort({ name: 1 });
+    res.json(ok(categories));
 }));
-exports.customerProductRouter.get("/products", (0, asyncHandler_1.asyncHandler)(async (req, res) => {
+customerProductRouter.get("/products", asyncHandler(async (req, res) => {
     const category = (req.query.category || "").trim();
     const brand = (req.query.brand || "").trim();
     const color = (req.query.color || "").trim();
@@ -56,19 +53,19 @@ exports.customerProductRouter.get("/products", (0, asyncHandler_1.asyncHandler)(
     if (sort === "price-high") {
         sortOption = { price: -1 };
     }
-    const products = await Product_1.Product.find(query)
+    const products = await Product.find(query)
         .populate("category", "name")
         .sort(sortOption);
-    res.json((0, envelope_1.ok)(products));
+    res.json(ok(products));
 }));
-exports.customerProductRouter.get("/products/:id", (0, asyncHandler_1.asyncHandler)(async (req, res) => {
+customerProductRouter.get("/products/:id", asyncHandler(async (req, res) => {
     const productId = req.params.id;
-    const product = await Product_1.Product.findOne({
+    const product = await Product.findOne({
         _id: productId,
         status: "active",
     }).populate("category", "name");
-    const foundProduct = (0, helpers_1.requireFound)(product, "Product not found", 404);
-    const relatedProducts = await Product_1.Product.find({
+    const foundProduct = requireFound(product, "Product not found", 404);
+    const relatedProducts = await Product.find({
         _id: { $ne: foundProduct._id },
         category: foundProduct.category,
         status: "active",
@@ -76,7 +73,7 @@ exports.customerProductRouter.get("/products/:id", (0, asyncHandler_1.asyncHandl
         .populate("category", "name")
         .sort({ createdAt: -1 })
         .limit(4);
-    res.json((0, envelope_1.ok)({
+    res.json(ok({
         product: foundProduct,
         relatedProducts,
     }));

@@ -1,7 +1,4 @@
-"use strict";
-Object.defineProperty(exports, "__esModule", { value: true });
-exports.notFound = notFound;
-const envelope_1 = require("../utils/envelope");
-function notFound(req, res) {
-    res.status(404).json((0, envelope_1.fail)(`Route not found ${req.method}`));
+import { fail } from "../utils/envelope.js";
+export function notFound(req, res) {
+    res.status(404).json(fail(`Route not found ${req.method}`));
 }

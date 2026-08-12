@@ -1,53 +1,50 @@
-"use strict";
-Object.defineProperty(exports, "__esModule", { value: true });
-exports.customerCheckoutWithPointsRouter = void 0;
-const express_1 = require("express");
-const Product_1 = require("../../models/Product");
-const auth_1 = require("../../middleware/auth");
-const asyncHandler_1 = require("../../utils/asyncHandler");
-const User_1 = require("../../models/User");
-const helpers_1 = require("../../utils/helpers");
-const envelope_1 = require("../../utils/envelope");
-const Cart_1 = require("../../models/Cart");
-const AppError_1 = require("../../utils/AppError");
-const Promo_1 = require("../../models/Promo");
-const Order_1 = require("../../models/Order");
-exports.customerCheckoutWithPointsRouter = (0, express_1.Router)();
-exports.customerCheckoutWithPointsRouter.use(auth_1.requireAuth);
-exports.customerCheckoutWithPointsRouter.get("/checkout/points", (0, asyncHandler_1.asyncHandler)(async (req, res) => {
-    const dbUser = await (0, auth_1.getDbUserFromReq)(req);
-    const user = await User_1.User.findById(dbUser._id)
+import { Router } from "express";
+import { Product } from "../../models/Product.js";
+import { getDbUserFromReq, requireAuth } from "../../middleware/auth.js";
+import { asyncHandler } from "../../utils/asyncHandler.js";
+import { User } from "../../models/User.js";
+import { requireFound, requireText } from "../../utils/helpers.js";
+import { ok } from "../../utils/envelope.js";
+import { Cart } from "../../models/Cart.js";
+import { AppError } from "../../utils/AppError.js";
+import { Promo } from "../../models/Promo.js";
+import { Order } from "../../models/Order.js";
+export const customerCheckoutWithPointsRouter = Router();
+customerCheckoutWithPointsRouter.use(requireAuth);
+customerCheckoutWithPointsRouter.get("/checkout/points", asyncHandler(async (req, res) => {
+    const dbUser = await getDbUserFromReq(req);
+    const user = await User.findById(dbUser._id)
         .select("points")
         .lean();
-    const foundUser = (0, helpers_1.requireFound)(user, "User not found", 404);
-    res.json((0, envelope_1.ok)({
+    const foundUser = requireFound(user, "User not found", 404);
+    res.json(ok({
         points: foundUser.points || 0,
     }));
 }));
-exports.customerCheckoutWithPointsRouter.post("/checkout/pay-with-points", (0, asyncHandler_1.asyncHandler)(async (req, res) => {
-    const dbUser = await (0, auth_1.getDbUserFromReq)(req);
+customerCheckoutWithPointsRouter.post("/checkout/pay-with-points", asyncHandler(async (req, res) => {
+    const dbUser = await getDbUserFromReq(req);
     const addressId = String(req.body.addressId || "").trim();
     const promoCode = String(req.body.promoCode || "")
         .trim()
         .toUpperCase();
-    (0, helpers_1.requireText)(addressId, "Address is required");
+    requireText(addressId, "Address is required");
     //get user and cart info
     const [user, cart] = await Promise.all([
-        User_1.User.findById(dbUser._id)
+        User.findById(dbUser._id)
             .select("name email addresses")
             .lean(),
-        Cart_1.Cart.findOne({ user: dbUser._id }).select("items").lean(),
+        Cart.findOne({ user: dbUser._id }).select("items").lean(),
     ]);
-    const foundUser = (0, helpers_1.requireFound)(user, "user not found", 404);
-    const foundCart = (0, helpers_1.requireFound)(cart, "Cart not found", 404);
+    const foundUser = requireFound(user, "user not found", 404);
+    const foundCart = requireFound(cart, "Cart not found", 404);
     if (!foundCart.items.length) {
-        throw new AppError_1.AppError(400, "Cart is empty");
+        throw new AppError(400, "Cart is empty");
     }
     const selectedAddress = foundUser.addresses.find((item) => String(item._id) === addressId);
     if (!selectedAddress) {
-        throw new AppError_1.AppError(404, "Address not found!!");
+        throw new AppError(404, "Address not found!!");
     }
-    const products = await Product_1.Product.find({
+    const products = await Product.find({
         _id: { $in: foundCart.items.map((item) => item.product) },
     })
         .select("price salePercentage stock status")
@@ -58,10 +55,10 @@ exports.customerCheckoutWithPointsRouter.post("/checkout/pay-with-points", (0, a
     const items = foundCart.items.map((cartItem) => {
         const product = productMap.get(String(cartItem.product));
         if (!product || product.status !== "active") {
-            throw new AppError_1.AppError(400, "One or more cart items are not avaibale");
+            throw new AppError(400, "One or more cart items are not avaibale");
         }
         if (product.stock < cartItem.quantity) {
-            throw new AppError_1.AppError(400, "Cart items are out of stock");
+            throw new AppError(400, "Cart items are out of stock");
         }
         const finalPrice = product.salePercentage
             ? Math.round(product.price - (product.price * product.salePercentage) / 100)
@@ -76,56 +73,56 @@ exports.customerCheckoutWithPointsRouter.post("/checkout/pay-with-points", (0, a
     let appliedPromoCode = "";
     let discountAmount = 0;
     if (promoCode) {
-        const promo = await Promo_1.Promo.findOne({ code: promoCode })
+        const promo = await Promo.findOne({ code: promoCode })
             .select("code percentage count minimumOrderValue startsAt endsAt")
             .lean();
-        const foundPromo = (0, helpers_1.requireFound)(promo, "Promo not found", 404);
+        const foundPromo = requireFound(promo, "Promo not found", 404);
         const now = new Date();
         if (now < foundPromo.startsAt ||
             now > foundPromo.endsAt ||
             foundPromo.count < 1) {
-            throw new AppError_1.AppError(400, "promo code is not active");
+            throw new AppError(400, "promo code is not active");
         }
         if (subTotal < foundPromo.minimumOrderValue) {
-            throw new AppError_1.AppError(400, "Minimum order value for this promo is not at the threesold");
+            throw new AppError(400, "Minimum order value for this promo is not at the threesold");
         }
         appliedPromoCode = foundPromo.code;
         discountAmount = Math.round((subTotal * foundPromo.percentage) / 100);
     }
     const totalAmount = Math.max(subTotal - discountAmount, 0);
     if (totalAmount > foundUser.points) {
-        throw new AppError_1.AppError(400, "Not enough points for this order");
+        throw new AppError(400, "Not enough points for this order");
     }
-    const deductedUserPoints = await User_1.User.updateOne({
+    const deductedUserPoints = await User.updateOne({
         _id: dbUser._id,
         points: { $gte: totalAmount },
     }, {
         $inc: { points: -totalAmount },
     });
     if (!deductedUserPoints.matchedCount) {
-        throw new AppError_1.AppError(400, "Not enough points for this order");
+        throw new AppError(400, "Not enough points for this order");
     }
     try {
         for (const item of items) {
-            const updated = await Product_1.Product.updateOne({
+            const updated = await Product.updateOne({
                 _id: item.product,
                 stock: { $gte: item.quantity },
             }, {
                 $inc: { stock: -item.quantity },
             });
             if (!updated.matchedCount) {
-                throw new AppError_1.AppError(400, "One or more cart items are out of stock");
+                throw new AppError(400, "One or more cart items are out of stock");
             }
         }
         if (appliedPromoCode) {
-            await Promo_1.Promo.updateOne({
+            await Promo.updateOne({
                 code: appliedPromoCode,
                 count: { $gt: 0 },
             }, {
                 $inc: { count: -1 },
             });
         }
-        await Cart_1.Cart.updateOne({ user: dbUser._id }, { $set: { items: [] } });
+        await Cart.updateOne({ user: dbUser._id }, { $set: { items: [] } });
         const pointsPaymentId = `points_${Date.now()}`;
         const deliveryAddress = [
             selectedAddress.address,
@@ -134,7 +131,7 @@ exports.customerCheckoutWithPointsRouter.post("/checkout/pay-with-points", (0, a
         ]
             .filter(Boolean)
             .join(", ");
-        const order = await Order_1.Order.create({
+        const order = await Order.create({
             user: dbUser._id,
             customerName: foundUser.name || selectedAddress.fullName,
             customerEmail: foundUser.email || "",
@@ -150,16 +147,16 @@ exports.customerCheckoutWithPointsRouter.post("/checkout/pay-with-points", (0, a
             paymentId: pointsPaymentId,
             paidAt: new Date(),
         });
-        const updatedUser = await User_1.User.findById(dbUser._id)
+        const updatedUser = await User.findById(dbUser._id)
             .select("points")
             .lean();
-        res.json((0, envelope_1.ok)({
+        res.json(ok({
             _id: String(order._id),
             totalPoints: updatedUser?.points || 0,
         }));
     }
     catch (error) {
-        await User_1.User.updateOne({
+        await User.updateOne({
             _id: dbUser._id,
         }, {
             $inc: { points: totalAmount },
