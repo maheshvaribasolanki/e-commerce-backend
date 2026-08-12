@@ -1,9 +1,9 @@
 import { Router, type Request, type Response } from "express";
-import { asyncHandler } from "../../utils/asyncHandler";
-import { Category } from "../../models/Category";
-import { ok } from "../../utils/envelope";
-import { Product } from "../../models/Product";
-import { requireFound } from "../../utils/helpers";
+import { asyncHandler } from "../../utils/asyncHandler.js";
+import { Category } from "../../models/Category.js";
+import { ok } from "../../utils/envelope.js";
+import { Product } from "../../models/Product.js";
+import { requireFound } from "../../utils/helpers.js";
 
 export const customerProductRouter = Router();
 

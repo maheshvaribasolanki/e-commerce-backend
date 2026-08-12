@@ -1,15 +1,15 @@
 import { Router, type Request, type Response } from "express";
 import { Types } from "mongoose";
-import { Product, ProductSize } from "../../models/Product";
-import { getDbUserFromReq, requireAuth } from "../../middleware/auth";
-import { asyncHandler } from "../../utils/asyncHandler";
-import { requireFound, requireText } from "../../utils/helpers";
-import { User } from "../../models/User";
-import { Cart } from "../../models/Cart";
-import { AppError } from "../../utils/AppError";
-import { Promo } from "../../models/Promo";
-import { Order } from "../../models/Order";
-import { ok } from "../../utils/envelope";
+import { Product, ProductSize } from "../../models/Product.js";
+import { getDbUserFromReq, requireAuth } from "../../middleware/auth.js";
+import { asyncHandler } from "../../utils/asyncHandler.js";
+import { requireFound, requireText } from "../../utils/helpers.js";
+import { User } from "../../models/User.js";
+import { Cart } from "../../models/Cart.js";
+import { AppError } from "../../utils/AppError.js";
+import { Promo } from "../../models/Promo.js";
+import { Order } from "../../models/Order.js";
+import { ok } from "../../utils/envelope.js";
 
 type UserAddressRow = {
   _id: Types.ObjectId;

@@ -1,13 +1,13 @@
 import { Router, type Request, type Response } from "express";
 import multer from "multer";
-import { getDbUserFromReq, requireAdmin } from "../../middleware/auth";
-import { asyncHandler } from "../../utils/asyncHandler";
-import { Category } from "../../models/Category";
-import { ok } from "../../utils/envelope";
-import { requireFound, requireNumber, requireText } from "../../utils/helpers";
-import { Product } from "../../models/Product";
-import { AppError } from "../../utils/AppError";
-import { uploadManyBuffersToCloudinary } from "../../utils/cloudinary";
+import { getDbUserFromReq, requireAdmin } from "../../middleware/auth.js";
+import { asyncHandler } from "../../utils/asyncHandler.js";
+import { Category } from "../../models/Category.js";
+import { ok } from "../../utils/envelope.js";
+import { requireFound, requireNumber, requireText } from "../../utils/helpers.js";
+import { Product } from "../../models/Product.js";
+import { AppError } from "../../utils/AppError.js";
+import { uploadManyBuffersToCloudinary } from "../../utils/cloudinary.js";
 
 type UploadedImage = {
   url: string;

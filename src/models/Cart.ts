@@ -1,5 +1,5 @@
 import mongoose, { HydratedDocument, model, Schema, Types } from "mongoose";
-import { ProductSize } from "./Product";
+import { ProductSize } from "./Product.js";
 
 export type CartItem = {
   product: Types.ObjectId;

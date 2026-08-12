@@ -1,34 +1,34 @@
 import 'dotenv/config'
 import express from 'express'
-import { connectDB } from './db'
+import { connectDB } from './db.js'
 import cors from 'cors'
 import morgan from 'morgan'
-import { ok } from "./utils/envelope";
-import { notFound } from './middleware/notFound'
-import { errorHandler } from './middleware/errorhandler'
+import { ok } from "./utils/envelope.js";
+import { notFound } from './middleware/notFound.js'
+import { errorHandler } from './middleware/errorhandler.js'
 import { clerkMiddleware } from '@clerk/express'
-import { authRouter } from './routes/auth/auth.routes'
+import { authRouter } from './routes/auth/auth.routes.js'
 
-import { adminDashboardRouter } from './routes/admin/dashboard.routes'
-import { adminProductRouter } from './routes/admin/product.routes'
-import { adminOrderRouter } from './routes/admin/orders.routes'
-import { adminPromoRouter } from './routes/admin/promo.routes'
-import { adminSettingsRouter } from './routes/admin/settings.routes'
+import { adminDashboardRouter } from './routes/admin/dashboard.routes.js'
+import { adminProductRouter } from './routes/admin/product.routes.js'
+import { adminOrderRouter } from './routes/admin/orders.routes.js'
+import { adminPromoRouter } from './routes/admin/promo.routes.js'
+import { adminSettingsRouter } from './routes/admin/settings.routes.js'
 
-import { customerHomeRouter } from './routes/customer/home.routes'
-import { customerProductRouter } from './routes/customer/product.routes'
-import { customerCartWishlistRouter } from './routes/customer/cart-wishlist.routes'
-import { customerCheckoutRouter } from './routes/customer/checkout.routes'
-import { customerCheckoutWithPointsRouter } from './routes/customer/checkout-with-points.routes'
-import { customerOrderRouter } from './routes/customer/orders.routes'
-import { customerPromoRouter } from './routes/customer/promo.routes'
-import { customerAddressRouter } from './routes/customer/address.routes'
+import { customerHomeRouter } from './routes/customer/home.routes.js'
+import { customerProductRouter } from './routes/customer/product.routes.js'
+import { customerCartWishlistRouter } from './routes/customer/cart-wishlist.routes.js'
+import { customerCheckoutRouter } from './routes/customer/checkout.routes.js'
+import { customerCheckoutWithPointsRouter } from './routes/customer/checkout-with-points.routes.js'
+import { customerOrderRouter } from './routes/customer/orders.routes.js'
+import { customerPromoRouter } from './routes/customer/promo.routes.js'
+import { customerAddressRouter } from './routes/customer/address.routes.js'
 
 async function mainEntryFunction() {
   await connectDB()
 
   const app = express()
-  const corsOrigins = (process.env.CORS_ORIGINS || "http://localhost:3000,http://localhost:5173")
+  const corsOrigins = (process.env.CORS_ORIGINS || "http://localhost:3000,http://localhost:5174")
     .split(",")
     .map(origin => origin.trim())
     .filter(Boolean)
