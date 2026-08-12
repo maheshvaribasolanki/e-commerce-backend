@@ -19,6 +19,7 @@ const BANNER_FOLDER = "ecommerce-monster-video/banners";
 const upload = multer({
     storage: multer.memoryStorage(),
     limits: {
+        fileSize: 5 * 1024 * 1024,
         fieldSize: 5 * 1024 * 1024,
         files: 10,
     },
