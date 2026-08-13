@@ -4,15 +4,14 @@ import { connectDB } from "./db.js";
 
 const PORT = process.env.PORT || 5000;
 
-async function startServer() {
-  await connectDB();
-
+function startServer() {
   app.listen(PORT, () => {
     console.log(`Server running at ${PORT}`);
   });
+
+  connectDB().catch((error) => {
+    console.error("Database connection failed:", error);
+  });
 }
 
-startServer().catch((error) => {
-  console.error("Failed to start server:", error);
-  process.exit(1);
-});
+startServer();
