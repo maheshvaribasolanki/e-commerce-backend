@@ -1,4 +1,5 @@
 import { Router, type Request, type Response } from "express";
+import mongoose from "mongoose";
 import { asyncHandler } from "../../utils/asyncHandler.js";
 import { Category } from "../../models/Category.js";
 import { ok } from "../../utils/envelope.js";
@@ -52,7 +53,7 @@ customerProductRouter.get(
       req: Request<{}, {}, {}, ProductAppliedFilterListQuery>,
       res: Response,
     ) => {
-      const category = (req.query.category || "").trim();
+      const categoryRaw = (req.query.category || "").trim();
       const brand = (req.query.brand || "").trim();
       const color = (req.query.color || "").trim();
       const size = (req.query.size || "").trim();
@@ -62,9 +63,43 @@ customerProductRouter.get(
         status: "active",
       };
 
-      if (category) {
-        query.category = category;
+      if (categoryRaw) {
+        const rawCategoryList = categoryRaw
+          .split(",")
+          .map((s) => s.trim())
+          .filter(Boolean);
+
+        if (rawCategoryList.length > 0) {
+          const validObjectIds = rawCategoryList.filter((item) =>
+            mongoose.Types.ObjectId.isValid(item),
+          );
+
+          const nameRegexes = rawCategoryList.map(
+            (name) => new RegExp(`^${name}$`, "i"),
+          );
+
+          const matchedCategories = await Category.find({
+            $or: [
+              { _id: { $in: validObjectIds } },
+              { name: { $in: nameRegexes } },
+            ],
+          });
+
+          const matchedIds = Array.from(
+            new Set([
+              ...validObjectIds,
+              ...matchedCategories.map((c) => c._id.toString()),
+            ]),
+          );
+
+          if (matchedIds.length > 0) {
+            query.category = { $in: matchedIds };
+          } else {
+            query.category = { $in: rawCategoryList };
+          }
+        }
       }
+
       if (brand) {
         query.brand = brand;
       }
