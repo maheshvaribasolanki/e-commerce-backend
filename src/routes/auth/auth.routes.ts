@@ -75,6 +75,18 @@ authRouter.post(
       },
     );
 
+    // Prevent creating a new DB user for an email that already exists
+    // but is associated with a different Clerk user id.
+    if (email) {
+      const existingByEmail = await User.findOne({ email });
+      if (existingByEmail && existingByEmail.clerkUserId !== userId) {
+        throw new AppError(
+          409,
+          "A user with this email already exists in our system. Please sign in with that account.",
+        );
+      }
+    }
+
     res.status(200).json(
       ok({
         user: {

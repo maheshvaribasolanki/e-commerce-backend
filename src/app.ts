@@ -10,6 +10,7 @@ import { adminProductRouter } from './routes/admin/product.routes.js'
 import { adminOrderRouter } from './routes/admin/orders.routes.js'
 import { adminPromoRouter } from './routes/admin/promo.routes.js'
 import { adminSettingsRouter } from './routes/admin/settings.routes.js'
+import { adminUsersRouter } from './routes/admin/users.routes.js'
 
 import { customerHomeRouter } from './routes/customer/home.routes.js'
 import { customerProductRouter } from './routes/customer/product.routes.js'
@@ -56,12 +57,14 @@ app.use("/api/admin", adminProductRouter);
 app.use("/api/admin", adminOrderRouter);
 app.use("/api/admin", adminPromoRouter);
 app.use("/api/admin", adminSettingsRouter);
+app.use("/api/admin", adminUsersRouter);
 
 app.use("/admin", adminDashboardRouter);
 app.use("/admin", adminProductRouter);
 app.use("/admin", adminOrderRouter);
 app.use("/admin", adminPromoRouter);
 app.use("/admin", adminSettingsRouter);
+app.use("/admin", adminUsersRouter);
 
 // Customer routes (mounted with and without /api prefix)
 app.use("/api/customer", customerHomeRouter);
